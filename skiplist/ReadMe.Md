@@ -25,7 +25,7 @@ TYPES
 
 	func (this *SkipList) Search(n int64, s string) interface{}
 
-从跳表中搜索int64和string的参数为键
+从跳表中搜索，int64和string的参数为键
 
 	func (this *SkipList) SearchByIndex(n int) interface{}
 
@@ -57,17 +57,13 @@ TYPES
 
 	func (this *SkipList) NewIterator(l, r int) *Iterator
 
-创建一个遍历器，可遍历跳表[l, r)区间内元素，r小于0会设为跳表长度 返回的遍历器位于下标l的元素的位置
+创建一个遍历器，可遍历跳表[l, r)区间内元素，r小于0会设为跳表长度。返回的遍历器位于下标l的元素的位置
 
 	type Iterator struct {
 		// contains filtered or unexported fields
 	}
 
 遍历器
-
-	func (this *Iterator) Key() (int64, string)
-
-返回当前元素的键
 
 	func (this *Iterator) Next() bool
 
@@ -77,10 +73,14 @@ TYPES
 
 向前遍历
 
-	func (this *Iterator) Set(v interface{})
+	func (this *Iterator) Key() (int64, string)
 
-设置当前元素的值
+返回当前元素的键
 
 	func (this *Iterator) Val() interface{}
 
 返回当前元素的值
+
+	func (this *Iterator) Set(v interface{})
+
+设置当前元素的值
