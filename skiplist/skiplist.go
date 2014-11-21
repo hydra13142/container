@@ -31,11 +31,10 @@ type SkipList struct {
 	long int
 }
 
-// 遍历器
-type Iterator struct {
-	p       *element
-	l, r, n int
-	o       bool
+// 代表一个元素
+type Element struct {
+	p *element
+	n int
 }
 
 func (x *key) cmp(y *key) int8 {
@@ -59,6 +58,27 @@ func New() *SkipList {
 	return &SkipList{new(element), make([]*element, 1), make([]int, 1), 0}
 }
 
+// 返回跳表长度
+func (this *SkipList) Len() int {
+	return this.long
+}
+
+// 清空重置跳表
+func (this *SkipList) Reset() {
+	var p, q, a, b *element
+	for p = this.root; p != nil; p = q {
+		q = p.D
+		for a = p; a != nil; a = b {
+			b = a.R
+			a.L, a.R, a.D, a.V = nil, nil, nil, nil
+		}
+	}
+	this.root = new(element)
+	this.line = make([]*element, 1)
+	this.path = make([]int, 1)
+	this.long = 0
+}
+
 func (this *SkipList) search(x *key) (i int, c int) {
 	for i, p := 0, this.root; p != nil; {
 		t, q := int8(1), p.R
@@ -73,30 +93,13 @@ func (this *SkipList) search(x *key) (i int, c int) {
 			this.path[i] = c
 			i, p = i+1, p.D
 		default:
+			c += q.C
 			this.line[i] = q
-			this.path[i] = c + q.C
+			this.path[i] = c
 			return i, c
 		}
 	}
 	return -1, c
-}
-
-func (this *SkipList) simpleSearch(x *key) *element {
-	for i, p := 0, this.root; p != nil; {
-		t, q := int8(1), p.R
-		if q != nil {
-			t = q.K.cmp(x)
-		}
-		switch t {
-		case -1:
-			p = q
-		case +1:
-			i, p = i+1, p.D
-		default:
-			return q.R
-		}
-	}
-	return nil
 }
 
 func (this *SkipList) member(n int) (i int, c int) {
@@ -117,21 +120,6 @@ func (this *SkipList) member(n int) (i int, c int) {
 		i, p = i+1, p.D
 	}
 	return -1, c
-}
-
-func (this *SkipList) simpleMember(n int) *element {
-	n++
-	for i, p := 0, this.root; p != nil; {
-		if n == 0 {
-			return p
-		}
-		if q := p.R; q != nil && q.C <= n {
-			p, n = q, n-q.C
-		} else {
-			i, p = i+1, p.D
-		}
-	}
-	return nil
 }
 
 func (this *SkipList) insert(i int, c int, k *key, v interface{}) {
@@ -202,15 +190,6 @@ func (this *SkipList) remove(t int) {
 	this.long--
 }
 
-// 从跳表中搜索int64和string的参数为键
-func (this *SkipList) Search(n int64, s string) interface{} {
-	p := this.simpleSearch(&key{n, s})
-	if p != nil {
-		return *p.V
-	}
-	return nil
-}
-
 // 插入跳表新的值，如已存在相同键的值，不作修改并返回假
 func (this *SkipList) Insert(n int64, s string, v interface{}) bool {
 	k := &key{n, s}
@@ -223,15 +202,15 @@ func (this *SkipList) Insert(n int64, s string, v interface{}) bool {
 	return true
 }
 
-// 更新跳表已有的值，如该键不存在值，不作插入并返回假
-func (this *SkipList) Update(n int64, s string, v interface{}) bool {
-	p := this.simpleSearch(&key{n, s})
-	if p == nil {
-		return false
+// 如该键不存在值则插入新值，如已存在则更新旧值
+func (this *SkipList) InsertUpdate(n int64, s string, v interface{}) {
+	k := &key{n, s}
+	i, c := this.search(k)
+	if i < 0 {
+		this.insert(i, c, k, v)
 	} else {
-		*p.V = v
+		*this.line[i].V = v
 	}
-	return true
 }
 
 // 删除跳表已有的值，如该键不存在值，返回假
@@ -242,23 +221,6 @@ func (this *SkipList) Delete(n int64, s string) bool {
 	} else {
 		this.remove(t)
 	}
-	return true
-}
-
-// 返回跳表中第n个值（下标从0开始）
-func (this *SkipList) SearchByIndex(n int) interface{} {
-	if n < 0 || n >= this.long {
-		return nil
-	}
-	return *this.simpleMember(n).V
-}
-
-// 更新跳表第n个值
-func (this *SkipList) UpdateByIndex(n int, v interface{}) bool {
-	if n < 0 || n >= this.long {
-		return false
-	}
-	*this.simpleMember(n).V = v
 	return true
 }
 
@@ -276,90 +238,70 @@ func (this *SkipList) DeleteByIndex(n int) bool {
 	return true
 }
 
-// 如该键不存在值则插入新值，如已存在则更新旧值
-func (this *SkipList) InsertOrUpdate(n int64, s string, v interface{}) {
-	k := &key{n, s}
-	i, c := this.search(k)
-	if i < 0 {
-		this.insert(i, c, k, v)
-	} else {
-		*this.line[i].V = v
-	}
-}
-
-// 返回跳表长度
-func (this *SkipList) Len() int {
-	return this.long
-}
-
-// 清空重置跳表
-func (this *SkipList) Reset() {
-	var p, q, a, b *element
-	for p = this.root; p != nil; p = q {
-		q = p.D
-		for a = p; a != nil; a = b {
-			b = a.R
-			a.L, a.R, a.D, a.V = nil, nil, nil, nil
+// 从跳表中搜索int64和string的参数为键
+func (this *SkipList) Search(n int64, s string) *Element {
+	c, k := 0, &key{n, s}
+	for i, p := 0, this.root; p != nil; {
+		t, q := int8(1), p.R
+		if q != nil {
+			t = q.K.cmp(k)
+		}
+		switch t {
+		case -1:
+			p, c = q, c+q.C
+		case +1:
+			i, p = i+1, p.D
+		default:
+			return &Element{q.R, c + q.C - 1}
 		}
 	}
-	this.root = new(element)
-	this.line = make([]*element, 1)
-	this.path = make([]int, 1)
-	this.long = 0
+	return nil
 }
 
-// 创建一个遍历器，可遍历跳表[l, r)区间内元素，r小于0会设为跳表长度
-// 返回的遍历器位于下标l的元素的位置
-func (this *SkipList) NewIterator(l, r int) *Iterator {
-	if l < 0 {
-		l = 0
-	}
-	if r < 0 {
-		r = this.long
-	}
-	if r <= l || l >= this.long {
+// 返回跳表中第n个值（下标从0开始）
+func (this *SkipList) SearchByIndex(n int) *Element {
+	if n < 0 || n >= this.long {
 		return nil
 	}
-	p := this.simpleMember(l)
-	for p.D != nil {
-		p = p.D
+	c, n := n, n+1
+	for i, p := 0, this.root; p != nil; {
+		if n == 0 {
+			return &Element{p, c}
+		}
+		if q := p.R; q != nil && q.C <= n {
+			p, n = q, n-q.C
+		} else {
+			i, p = i+1, p.D
+		}
 	}
-	return &Iterator{p, l, r, l, true}
+	return nil
 }
 
 // 向前遍历
-func (this *Iterator) Prev() bool {
+func (this *Element) Prev() bool {
 	this.p = this.p.L
 	this.n--
-	this.o = this.p != nil && this.n >= this.l && this.n < this.r
-	return this.o
+	return this.p != nil
 }
 
 // 向后遍历
-func (this *Iterator) Next() bool {
+func (this *Element) Next() bool {
 	this.p = this.p.R
 	this.n++
-	this.o = this.p != nil && this.n >= this.l && this.n < this.r
-	return this.o
+	return this.p != nil
 }
 
 // 返回当前元素的键
-func (this *Iterator) Key() (int64, string) {
-	if !this.o {
-		panic(er)
-	}
+func (this *Element) Key() (int64, string) {
 	return this.p.K.N, this.p.K.S
 }
 
 // 返回当前元素的值
-func (this *Iterator) Val() interface{} {
-	if !this.o {
-		panic(er)
-	}
+func (this *Element) Val() interface{} {
 	return *this.p.V
 }
 
 // 设置当前元素的值
-func (this *Iterator) Set(v interface{}) {
+func (this *Element) Set(v interface{}) {
 	*this.p.V = v
 }
