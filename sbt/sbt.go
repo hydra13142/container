@@ -1,6 +1,12 @@
 // 平衡二叉查找树: 宽度平衡二叉树 —— Size Balanced Tree —— SBT树
 package sbt
 
+// 由int64和string复合构成的键
+type key struct {
+	N int64
+	S string
+}
+
 // 二叉树的指针
 type treePointer struct {
 	Dad  *Node // 不维护该指针则必须在maintain时维护一个节点路径数组
@@ -17,19 +23,60 @@ type linkPointer struct {
 // 宽度平衡二叉树的节点，同时也是双向链表的节点
 type Node struct {
 	count uint
-	right int64
-	Value interface{}
+	key
+	val   interface{}
 	treePointer
 	linkPointer
+}
+
+// 键值的比较函数
+func compare(x, y *key) int8 {
+	switch {
+	case x.N < y.N:
+		return -1
+	case x.N > y.N:
+		return +1
+	}
+	switch {
+	case x.S < y.S:
+		return -1
+	case x.S > y.S:
+		return +1
+	}
+	return 0
+}
+
+// 宽度平衡二叉树，因为维护二叉树会导致根节点改变，另设一类型维护
+type SBT struct {
+	root *Node
 }
 
 // 出于简化代码考虑，隐藏的末端节点
 var null = &Node{}
 
-// 宽度平衡二叉树，因为维护二叉树会导致根节点改变，另设一类型维护
-type SBT struct {
-	root      *Node
-	duplicate bool
+// 获得前驱节点，用于简单迭代
+func (this *Node) Prev() *Node {
+	return this.Pre
+}
+
+// 获得后继节点，用于简单迭代
+func (this *Node) Next() *Node {
+	return this.Nxt
+}
+
+// 获得节点的键，采用函数避免误修改
+func (this *Node) Key() (int64, string) {
+	return this.N, this.S
+}
+
+// 获得节点的键，采用函数避免误修改
+func (this *Node) Val() interface{} {
+	return this.val
+}
+
+// 获得节点的键，采用函数避免误修改
+func (this *Node) Set(v interface{}) {
+	this.val = v
 }
 
 // 包私有的树维护函数
@@ -98,42 +145,25 @@ func maintain(p *Node) *Node {
 }
 
 // 创建一个SBT树，重复键只会更新对应的值
-func NewSBT() *SBT {
+func New() *SBT {
 	p := new(SBT)
 	p.root = null
-	p.duplicate = false
 	return p
 }
 
-// 创建一个可以存入重复键值对的SBT树
-func NewDuplicateSBT() *SBT {
-	p := new(SBT)
-	p.root = null
-	p.duplicate = true
-	return p
-}
-
-// 插入新值
-func (this *SBT) Insert(k int64, v interface{}) {
+// 如果键已存在，更新值；如果不存在，插入新的键值对
+func (this *SBT) Update(n int64, s string, v interface{}) {
 	var p, q, r *Node
+	k := key{n,s}
 	for q, p = null, this.root; p != null; {
-		switch {
-		case k < p.right:
+		switch compare(&k, &p.key) {
+		case -1:
 			q, p = p, p.Lson
-		case k > p.right:
+		case +1:
 			q, p = p, p.Rson
 		default:
-			if !this.duplicate {
-				q.Value = v
-				return
-			}
-			if L, R := p.Lson, p.Rson; L.count < R.count {
-				for q, p = p, R; p != null; q, p = p, p.Lson {
-				}
-			} else {
-				for q, p = p, L; p != null; q, p = p, p.Rson {
-				}
-			}
+			q.val = v
+			return
 		}
 	}
 	p = new(Node)
@@ -142,7 +172,7 @@ func (this *SBT) Insert(k int64, v interface{}) {
 		this.root = p
 		return
 	}
-	if k > q.right {
+	if compare(&k, &q.key) > 0 {
 		q.Rson = p
 		r = q.Nxt
 		q.Nxt, p.Pre, p.Nxt = p, q, r
@@ -160,18 +190,53 @@ func (this *SBT) Insert(k int64, v interface{}) {
 	this.root = maintain(q)
 }
 
-// 删除值
-// 内部删除的节点会直接进行清零处理后释放
-func (this *SBT) Delete(k int64) {
-	if p := this.Search(k); p != nil {
-		this.DeleteNode(p)
-		*p = Node{}
+// 不管键已存在或不存在，都插入新的键值对
+func (this *SBT) Insert(n int64, s string, v interface{}) {
+	var p, q, r *Node
+	k := key{n,s}
+	for q, p = null, this.root; p != null; {
+		switch compare(&k, &p.key) {
+		case -1:
+			q, p = p, p.Lson
+		case +1:
+			q, p = p, p.Rson
+		default:
+			if L, R := p.Lson, p.Rson; L.count < R.count {
+				for q, p = p, R; p != null; q, p = p, p.Lson {
+				}
+			} else {
+				for q, p = p, L; p != null; q, p = p, p.Rson {
+				}
+			}
+		}
 	}
+	p = new(Node)
+	*p = Node{1, k, v, treePointer{q, null, null}, linkPointer{nil, nil}}
+	if q == null {
+		this.root = p
+		return
+	}
+	if compare(&k, &q.key) > 0 {
+		q.Rson = p
+		r = q.Nxt
+		q.Nxt, p.Pre, p.Nxt = p, q, r
+		if r != nil {
+			r.Pre = p
+		}
+	} else {
+		q.Lson = p
+		r = q.Pre
+		q.Pre, p.Nxt, p.Pre = p, q, r
+		if r != nil {
+			r.Nxt = p
+		}
+	}
+	this.root = maintain(q)
 }
 
 // 删除树的某个节点，使用者应确保该节点确为当前树的节点，否则结果不可预知。
 // 删除的节点会保持原本的指针和键值对，对齐清理/利用由使用者负责
-func (this *SBT) DeleteNode(p *Node) {
+func (this *SBT) Delete(p *Node) {
 	var q, r, s *Node
 	if p == nil {
 		return
@@ -231,12 +296,13 @@ func (this *SBT) DeleteNode(p *Node) {
 }
 
 // 根据键查找值
-func (this *SBT) Search(k int64) *Node {
+func (this *SBT) Search(n int64, s string) *Node {
+	k := key{n,s}
 	for p := this.root; p != null; {
-		switch {
-		case p.right > k:
+		switch compare(&k, &p.key) {
+		case -1:
 			p = p.Lson
-		case p.right < k:
+		case +1:
 			p = p.Rson
 		default:
 			return p
@@ -264,17 +330,26 @@ func (this *SBT) Index(n uint) *Node {
 	return nil
 }
 
-// 获得节点的键，采用函数避免误修改
-func (this *Node) Key() int64 {
-	return this.right
+// 返回最小键的节点
+func (this *SBT) Min() *Node {
+	p := this.root
+	if p == null {
+		return nil
+	}
+	for p.Lson != null {
+		p = p.Lson
+	}
+	return p
 }
 
-// 获得后继节点，用于简单迭代
-func (this *Node) Next() *Node {
-	return this.Nxt
-}
-
-// 获得前驱节点，用于简单迭代
-func (this *Node) Last() *Node {
-	return this.Pre
+// 返回最大键的节点
+func (this *SBT) Max() *Node {
+	p := this.root
+	if p == null {
+		return nil
+	}
+	for p.Rson != null {
+		p = p.Rson
+	}
+	return p
 }
