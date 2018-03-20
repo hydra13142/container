@@ -69,12 +69,12 @@ func (this *Node) Key() (int64, string) {
 	return this.N, this.S
 }
 
-// 获得节点的键，采用函数避免误修改
+// 获得节点的值，采用函数避免误修改
 func (this *Node) Val() interface{} {
 	return this.val
 }
 
-// 获得节点的键，采用函数避免误修改
+// 设置节点的值
 func (this *Node) Set(v interface{}) {
 	this.val = v
 }
@@ -144,7 +144,7 @@ func maintain(p *Node) *Node {
 	return null
 }
 
-// 创建一个SBT树，重复键只会更新对应的值
+// 创建一个SBT树
 func New() *SBT {
 	p := new(SBT)
 	p.root = null
@@ -235,7 +235,7 @@ func (this *SBT) Insert(n int64, s string, v interface{}) {
 }
 
 // 删除树的某个节点，使用者应确保该节点确为当前树的节点，否则结果不可预知。
-// 删除的节点会保持原本的指针和键值对，对齐清理/利用由使用者负责
+// 删除的节点会保持原本的指针和键值对，对其清理/利用由使用者负责
 func (this *SBT) Delete(p *Node) {
 	var q, r, s *Node
 	if p == nil {

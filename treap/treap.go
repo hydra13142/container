@@ -1,9 +1,7 @@
 package treap
 
 import (
-	"fmt"
 	"math/rand"
-	"os"
 	"time"
 )
 
@@ -39,7 +37,7 @@ type BST struct {
 
 var null = &node{wgt: int64(^uint64(0) >> 1)}
 
-func (x *key) cmp(y *key) int8 {
+func compare(x, y *key) int8 {
 	switch {
 	case x.N < y.N:
 		return -1
@@ -162,7 +160,7 @@ func (this *Treap) Update(w, n int64, s string, v interface{}) {
 	var p, q *node
 	k := key{n, s}
 	for q, p = null, this.node; p != null; {
-		switch p.key.cmp(&k) {
+		switch compare(&p.key, &k) {
 		case -1:
 			q, p = p, p.Rsn
 		case +1:
@@ -178,7 +176,7 @@ func (this *Treap) Update(w, n int64, s string, v interface{}) {
 		this.node = p
 		return
 	}
-	switch q.key.cmp(&k) {
+	switch compare(&q.key, &k) {
 	case -1:
 		q.Rsn = p
 	case +1:
@@ -193,7 +191,7 @@ func (this *Treap) Insert(w, n int64, s string, v interface{}) {
 	var p, q *node
 	k := key{n, s}
 	for q, p = null, this.node; p != null; {
-		switch p.key.cmp(&k) {
+		switch compare(&p.key, &k) {
 		case -1:
 			q, p = p, p.Rsn
 		case +1:
@@ -209,7 +207,7 @@ func (this *Treap) Insert(w, n int64, s string, v interface{}) {
 		this.node = p
 		return
 	}
-	switch q.key.cmp(&k) {
+	switch compare(&q.key, &k) {
 	case -1:
 		q.Rsn = p
 	case +1:
@@ -224,7 +222,7 @@ func (this *Treap) Search(n int64, s string) interface{} {
 	p := this.node
 	k := key{n, s}
 	for p != null {
-		switch p.key.cmp(&k) {
+		switch compare(&p.key, &k) {
 		case 0:
 			return p.val
 		case 1:
@@ -241,7 +239,7 @@ func (this *Treap) Delete(n int64, s string) {
 	var p, q *node
 	k := key{n, s}
 	for q, p = null, this.node; p != null; {
-		switch p.key.cmp(&k) {
+		switch compare(&p.key, &k) {
 		case -1:
 			q, p = p, p.Rsn
 		case +1:
