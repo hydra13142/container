@@ -12,17 +12,24 @@ type key struct {
 	S string
 }
 
+// 二叉树的指针
+type treePointer struct {
+	Lsn *Node
+	Rsn *Node
+	Dad *Node
+}
+
 // 树堆的节点
-type node struct {
+type Node struct {
 	wgt int64
 	key
-	val           interface{}
-	Lsn, Rsn, Dad *node
+	val interface{}
+	treePointer
 }
 
 // 树堆
 type Treap struct {
-	*node
+	root *Node
 }
 
 // 使用树堆为底层结构的优先级队列
@@ -35,7 +42,7 @@ type BST struct {
 	Treap
 }
 
-var null = &node{wgt: int64(^uint64(0) >> 1)}
+var null = &Node{wgt: int64(^uint64(0) >> 1)}
 
 func compare(x, y *key) int8 {
 	switch {
@@ -53,15 +60,35 @@ func compare(x, y *key) int8 {
 	return 0
 }
 
+// 获得节点的键，采用函数避免误修改
+func (this *Node) Key() (int64, string) {
+	return this.N, this.S
+}
+
+// 获得节点的值，采用函数避免误修改
+func (this *Node) Val() interface{} {
+	return this.val
+}
+
+// 获得节点的优先级，越小越优先
+func (this *Node) Weight() int64 {
+	return this.wgt
+}
+
+// 设置节点的值
+func (this *Node) Set(v interface{}) {
+	this.val = v
+}
+
 // 创建一个树堆
 func NewTreap() *Treap {
 	p := new(Treap)
-	p.node = null
+	p.root = null
 	return p
 }
 
 // 针对新加入的叶节点，从底向上维护树堆，返回维护后的树堆根节点
-func arrange(p *node) *node {
+func arrange(p *Node) *Node {
 	for {
 		D, L, R := p.Dad, p.Lsn, p.Rsn
 		if L.wgt < R.wgt {
@@ -105,8 +132,8 @@ func arrange(p *node) *node {
 }
 
 // 将当前节点视为根节点多次旋转到成为叶节点后删除，并返回新的根节点
-func release(p *node) *node {
-	q := &node{Lsn: p, Rsn: p, Dad: p.Dad}
+func release(p *Node) *Node {
+	q := &Node{treePointer: treePointer{p, p, p.Dad}}
 	D, L, R := q, p.Lsn, p.Rsn
 	for {
 		if L.wgt < R.wgt {
@@ -157,9 +184,9 @@ func release(p *node) *node {
 
 // 插入键值对，如果键已存在，则更新值。w为优先级；n、s构成键；v为值。
 func (this *Treap) Update(w, n int64, s string, v interface{}) {
-	var p, q *node
+	var p, q *Node
 	k := key{n, s}
-	for q, p = null, this.node; p != null; {
+	for q, p = null, this.root; p != null; {
 		switch compare(&p.key, &k) {
 		case -1:
 			q, p = p, p.Rsn
@@ -170,10 +197,10 @@ func (this *Treap) Update(w, n int64, s string, v interface{}) {
 			return
 		}
 	}
-	p = new(node)
-	*p = node{w, k, v, null, null, null}
+	p = new(Node)
+	*p = Node{w, k, v, treePointer{null, null, null}}
 	if q == null {
-		this.node = p
+		this.root = p
 		return
 	}
 	switch compare(&q.key, &k) {
@@ -183,14 +210,14 @@ func (this *Treap) Update(w, n int64, s string, v interface{}) {
 		q.Lsn = p
 	}
 	p.Dad = q
-	this.node = arrange(p)
+	this.root = arrange(p)
 }
 
 // 插入键值对，不管键存不存在，都插入新的键值对。w为优先级；n、s构成键；v为值。
 func (this *Treap) Insert(w, n int64, s string, v interface{}) {
-	var p, q *node
+	var p, q *Node
 	k := key{n, s}
-	for q, p = null, this.node; p != null; {
+	for q, p = null, this.root; p != null; {
 		switch compare(&p.key, &k) {
 		case -1:
 			q, p = p, p.Rsn
@@ -201,10 +228,10 @@ func (this *Treap) Insert(w, n int64, s string, v interface{}) {
 			}
 		}
 	}
-	p = new(node)
-	*p = node{w, k, v, null, null, null}
+	p = new(Node)
+	*p = Node{w, k, v, treePointer{null, null, null}}
 	if q == null {
-		this.node = p
+		this.root = p
 		return
 	}
 	switch compare(&q.key, &k) {
@@ -214,12 +241,63 @@ func (this *Treap) Insert(w, n int64, s string, v interface{}) {
 		q.Lsn = p
 	}
 	p.Dad = q
-	this.node = arrange(p)
+	this.root = arrange(p)
+}
+
+// 使用树堆为底层结构的优先级队列
+func NewPQ() *PQ {
+	p := new(PQ)
+	p.root = null
+	return p
+}
+
+// 添加任务或者更新同一优先级的任务
+func (this *PQ) Update(w int64, v interface{}) {
+	this.Treap.Update(w, rd.Int63(), "", v)
+}
+
+// 不管是否存在同一优先级的任务都添加任务
+func (this *PQ) Insert(w int64, v interface{}) {
+	this.Treap.Insert(w, rd.Int63(), "", v)
+}
+
+// 释放最高优先级的任务
+func (this *PQ) Pop() *Node {
+	if p := this.root; p != null {
+		this.root = release(p)
+		return p
+	}
+	return nil
+}
+
+// 释放最高优先级的任务
+func (this *PQ) Peek() *Node {
+	if p := this.root; p != null {
+		return p
+	}
+	return nil
+}
+
+// 创建一个以树堆为底层结构的二叉搜索树
+func NewBST() *BST {
+	p := new(BST)
+	p.root = null
+	return p
+}
+
+// 添加键值对或者更新已存在的键对应的值
+func (this *BST) Update(n int64, s string, v interface{}) {
+	this.Treap.Update(rd.Int63(), n, s, v)
+}
+
+// 添加键值对，即使键已存在仍然添加
+func (this *BST) Insert(n int64, s string, v interface{}) {
+	this.Treap.Insert(rd.Int63(), n, s, v)
 }
 
 // 根据键查找值
-func (this *Treap) Search(n int64, s string) interface{} {
-	p := this.node
+func (this *BST) Search(n int64, s string) interface{} {
+	p := this.root
 	k := key{n, s}
 	for p != null {
 		switch compare(&p.key, &k) {
@@ -235,10 +313,10 @@ func (this *Treap) Search(n int64, s string) interface{} {
 }
 
 // 删除键值对
-func (this *Treap) Delete(n int64, s string) {
-	var p, q *node
+func (this *BST) Delete(n int64, s string) {
+	var p, q *Node
 	k := key{n, s}
-	for q, p = null, this.node; p != null; {
+	for q, p = null, this.root; p != null; {
 		switch compare(&p.key, &k) {
 		case -1:
 			q, p = p, p.Rsn
@@ -247,52 +325,9 @@ func (this *Treap) Delete(n int64, s string) {
 		default:
 			p = release(p)
 			if q == null {
-				this.node = p
+				this.root = p
 			}
 			return
 		}
 	}
-}
-
-// 使用树堆为底层结构的优先级队列
-func NewPQ() *PQ {
-	p := new(PQ)
-	p.node = null
-	return p
-}
-
-// 添加任务或者更新同一优先级的任务
-func (this *PQ) Update(w int64, v interface{}) {
-	this.Treap.Update(w, rd.Int63(), "", v)
-}
-
-// 不管是否存在同一优先级的任务都添加任务
-func (this *PQ) Insert(w int64, v interface{}) {
-	this.Treap.Insert(w, rd.Int63(), "", v)
-}
-
-// 释放最高优先级的任务
-func (this *PQ) Pop() interface{} {
-	if p := this.node; p != null {
-		this.node = release(p)
-		return p.val
-	}
-	return nil
-}
-
-// 创建一个以树堆为底层结构的二叉搜索树
-func NewBST() *BST {
-	p := new(BST)
-	p.node = null
-	return p
-}
-
-// 添加键值对或者更新已存在的键对应的值
-func (this *BST) Update(n int64, s string, v interface{}) {
-	this.Treap.Update(rd.Int63(), n, s, v)
-}
-
-// 添加键值对，即使键已存在仍然添加
-func (this *BST) Insert(n int64, s string, v interface{}) {
-	this.Treap.Insert(rd.Int63(), n, s, v)
 }
