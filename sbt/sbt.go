@@ -18,7 +18,7 @@ type item struct {
 	Val typeC
 }
 
-// 与双向链表复合AVL树的节点
+// SBT树的节点
 type Node struct {
 	mrk uint8
 	cnt uint
@@ -315,7 +315,7 @@ func toleaf(r, p *Node) *Node {
 	}
 }
 
-// 创建一个与链表复合的SBT树
+// 创建一个SBT线索树
 func New() *SBT {
 	p := new(SBT)
 	p.root = null

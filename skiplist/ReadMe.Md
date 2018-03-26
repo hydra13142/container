@@ -1,74 +1,57 @@
-package skiplist
-====
+use 'godoc cmd/github.com/hydra13142/container/skiplist' for documentation on the github.com/hydra13142/container/skiplist command 
 
+PACKAGE DOCUMENTATION
+
+package skiplist
     import "github.com/hydra13142/container/skiplist"
+
 
 TYPES
 
-	type SkipList struct {
-		// contains filtered or unexported fields
-	}
+type Node struct {
+    // contains filtered or unexported fields
+}
+    跳表的节点
 
-跳表类型
+func (this *Node) Key() (int64, string)
+    返回当前元素的键
 
-	func New() *SkipList
+func (this *Node) Next() *Node
+    获得后继节点，用于简单迭代
 
-创建一个跳表
+func (this *Node) Prev() *Node
+    获得前驱节点，用于简单迭代
 
-	func (this *SkipList) Len() int
+func (this *Node) Set(v interface{})
+    设置当前元素的值
 
-返回跳表长度
+func (this *Node) Val() interface{}
+    返回当前元素的值
 
-	func (this *SkipList) Reset()
+type Skiplist struct {
+    // contains filtered or unexported fields
+}
+    跳表类型
 
-清空重置跳表
+func New() *Skiplist
+    创建一个跳表
 
-	func (this *SkipList) Insert(n int64, s string, v interface{}) bool
+func (this *Skiplist) Delete(n int64, s string)
+    删除键值对
 
-插入跳表新的值，如已存在相同键的值，不作修改并返回假
+func (this *Skiplist) Insert(n int64, s string, v interface{})
+    插入跳表新的键值对，即使已存在该键，仍进行插入
 
-	func (this *SkipList) InsertUpdate(n int64, s string, v interface{})
+func (this *Skiplist) Max() *Node
+    返回最大键的（位于最底层的）节点
 
-如该键不存在值则插入新值，如已存在则更新旧值
+func (this *Skiplist) Min() *Node
+    返回最小键的（位于最底层的）节点
 
-	func (this *SkipList) Delete(n int64, s string) bool
+func (this *Skiplist) Search(n int64, s string) *Node
+    根据键来查找节点
 
-删除跳表已有的值，如该键不存在值，返回假
+func (this *Skiplist) Update(n int64, s string, v interface{})
+    如该键不存在值则插入新键值对，如已存在则更新旧值
 
-	func (this *SkipList) DeleteByIndex(n int) bool
 
-删除跳表第n个值
-
-	func (this *SkipList) Search(n int64, s string) *Element
-
-从跳表中搜索，int64和string的参数为键
-
-	func (this *SkipList) SearchByIndex(n int) *Element
-
-返回跳表中第n个值（下标从0开始）
-
-	type Element struct {
-		// contains filtered or unexported fields
-	}
-
-代表一个元素
-
-	func (this *Element) Next() bool
-
-向后遍历
-
-	func (this *Element) Prev() bool
-
-向前遍历
-
-	func (this *Element) Key() (int64, string)
-
-返回当前元素的键
-
-	func (this *Element) Val() interface{}
-
-返回当前元素的值
-
-	func (this *Element) Set(v interface{})
-
-设置当前元素的值

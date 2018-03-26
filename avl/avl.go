@@ -26,7 +26,7 @@ type item struct {
 	Val typeC
 }
 
-// 与双向链表复合AVL树的节点
+// AVL树的节点
 type Node struct {
 	mrk uint8
 	hgt int8
@@ -408,7 +408,7 @@ func (this *trace) Delete(x **Node, k *Key) {
 	this.Maintain()
 }
 
-// 创建一个与链表复合的AVL树
+// 创建一个AVL线索树
 func New() *AVL {
 	p := new(AVL)
 	p.root = null
@@ -479,7 +479,7 @@ func (this *AVL) Max() *Node {
 	}
 }
 
-// 用来以文本格式显示二叉树（SBT包装版本）
+// 用来以文本格式显示二叉树（AVL包装版本）
 func (this *AVL) Show(f func(*Node) string) string {
 	n, str := this.root.Show(f)
 	block := ""
