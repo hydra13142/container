@@ -8,13 +8,11 @@ package sbt
 
 TYPES
 
-	typeA、typeB、typeC分别是int64、string和interface{}的别名。主要目的方便复用。
-
 type Key struct {
     N typeA
     S typeB
 }
-    由int64和string复合构成的键
+    由typeA和typeB复合构成的键
 
 type Node struct {
     // contains filtered or unexported fields

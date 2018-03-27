@@ -5,19 +5,25 @@ import (
 	"time"
 )
 
+type typeA = int64
+
+type typeB = string
+
+type typeC = interface{}
+
 // 本函数用于随机生成跳表高度，从1到10，每个数字出现的几率都是其左侧邻居的约20%。
 var height func() int
 
-// 由int64和string复合构成的键
-type key struct {
-	N int64
-	S string
+// 由typeA和typeB复合构成的键
+type Key struct {
+	N typeA
+	S typeB
 }
 
 // 键值对，键值对独立出来的目的是，跳表同一键值对的节点是成列的。
 type item struct {
-	key
-	val interface{}
+	Key
+	Val typeC
 }
 
 // 跳表的节点
@@ -35,7 +41,7 @@ type Skiplist struct {
 }
 
 // 键值的比较函数
-func compare(x, y *key) int8 {
+func compare(x, y *Key) int8 {
 	switch {
 	case x.N < y.N:
 		return -1
@@ -62,34 +68,34 @@ func (this *Node) Next() *Node {
 }
 
 // 返回当前元素的键
-func (this *Node) Key() (int64, string) {
+func (this *Node) Key() (typeA, typeB) {
 	return this.N, this.S
 }
 
 // 返回当前元素的值
-func (this *Node) Val() interface{} {
-	return this.val
+func (this *Node) Val() typeC {
+	return this.Val
 }
 
 // 设置当前元素的值
-func (this *Node) Set(v interface{}) {
-	this.item.val = v
+func (this *Node) Set(v typeC) {
+	this.item.Val = v
 }
 
 // p为跳表左上角的节点，返回值，int值表示查询经历的层数，bool表示是否查询到该键。
-func (this *trace) Search(p *Node, k *key) (int, bool) {
+func (this *trace) Search(p *Node, k *Key) (int, bool) {
 	var (
 		q *Node
 		i = 0
 	)
-	if p == nil || compare(k, &p.item.key) < 0 {
+	if p == nil || compare(k, &p.item.Key) < 0 {
 		return 0, false
 	}
 outer:
 	for {
 	inner:
 		for p != nil {
-			switch compare(&p.item.key, k) {
+			switch compare(&p.item.Key, k) {
 			case -1:
 				q, p = p, p.rgt
 			case 0:
@@ -150,8 +156,8 @@ func (this *trace) Insert(root *Node, i int, t *item) *Node {
 }
 
 // 删除键值对，使用者应确保该键确实存在于跳表中，注意trace的数据应为执行Search方法记录了查找轨迹的
-func (this *trace) Delete(root *Node, i int, k *key) *Node {
-	if compare(&root.item.key, k) == 0 {
+func (this *trace) Delete(root *Node, i int, k *Key) *Node {
+	if compare(&root.item.Key, k) == 0 {
 		for p := root.dwn; p != nil; p = p.dwn {
 			this[i] = p
 			i++
@@ -186,12 +192,12 @@ func New() *Skiplist {
 }
 
 // 如该键不存在值则插入新键值对，如已存在则更新旧值
-func (this *Skiplist) Update(n int64, s string, v interface{}) {
+func (this *Skiplist) Update(n typeA, s typeB, v typeC) {
 	var tr trace
-	k := key{n, s}
+	k := Key{n, s}
 	i, ok := tr.Search(this.root, &k)
 	if ok {
-		tr[i-1].item.val = v
+		tr[i-1].item.Val = v
 		return
 	}
 	t := new(item)
@@ -200,9 +206,9 @@ func (this *Skiplist) Update(n int64, s string, v interface{}) {
 }
 
 // 插入跳表新的键值对，即使已存在该键，仍进行插入
-func (this *Skiplist) Insert(n int64, s string, v interface{}) {
+func (this *Skiplist) Insert(n typeA, s typeB, v typeC) {
 	var tr trace
-	k := key{n, s}
+	k := Key{n, s}
 	i, ok := tr.Search(this.root, &k)
 	if ok {
 		for p := tr[i-1].dwn; p != nil; p = p.dwn {
@@ -216,9 +222,9 @@ func (this *Skiplist) Insert(n int64, s string, v interface{}) {
 }
 
 // 删除键值对
-func (this *Skiplist) Delete(n int64, s string) {
+func (this *Skiplist) Delete(n typeA, s typeB) {
 	var tr trace
-	k := key{n, s}
+	k := Key{n, s}
 	i, ok := tr.Search(this.root, &k)
 	if ok {
 		this.root = tr.Delete(this.root, i, &k)
@@ -226,17 +232,17 @@ func (this *Skiplist) Delete(n int64, s string) {
 }
 
 // 根据键来查找节点
-func (this *Skiplist) Search(n int64, s string) *Node {
+func (this *Skiplist) Search(n typeA, s typeB) *Node {
 	var p, q *Node = this.root, nil
-	k := key{n, s}
-	if p == nil || compare(&k, &p.item.key) < 0 {
+	k := Key{n, s}
+	if p == nil || compare(&k, &p.item.Key) < 0 {
 		return nil
 	}
 outer:
 	for {
 	inner:
 		for p != nil {
-			switch compare(&p.item.key, &k) {
+			switch compare(&p.item.Key, &k) {
 			case -1:
 				q, p = p, p.rgt
 			case 0:

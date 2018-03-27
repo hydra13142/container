@@ -14,7 +14,7 @@ type typeB = string
 
 type typeC = interface{}
 
-// 由int64和string复合构成的键
+// 由typeA和typeB复合构成的键
 type Key struct {
 	N typeA
 	S typeB

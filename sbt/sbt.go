@@ -6,7 +6,7 @@ type typeB = string
 
 type typeC = interface{}
 
-// 由int64和string复合构成的键
+// 由typeA和typeB复合构成的键
 type Key struct {
 	N typeA
 	S typeB
@@ -158,7 +158,7 @@ func maintain(r, p *Node) *Node {
 	r.ptO = anchor
 	for p != anchor {
 		l, r, o := p.Lson(), p.Rson(), p.ptO
-		sp := (o.Lson() == p)
+		sp := (o.ptA == p)
 		switch {
 		case l.cnt > r.cnt:
 			b, d := l.Lson(), l.Rson()
@@ -272,7 +272,7 @@ func toleaf(r, p *Node) *Node {
 	var anchor = &Node{mrk: 2, ptA: r}
 	r.ptO = anchor
 	l, r, o := p.Lson(), p.Rson(), p.ptO
-	sp := (o.Lson() == p)
+	sp := (o.ptA == p)
 	for {
 		switch {
 		case l.cnt > r.cnt:
@@ -326,16 +326,17 @@ func New() *SBT {
 func (this *SBT) Update(n typeA, s typeB, v typeC) {
 	var (
 		p, q *Node
-		sp   bool
+		sp   int8
 	)
 	k := &Key{n, s}
 loop:
 	for q, p = nil, this.root; p != null; {
-		switch compare(k, &p.item.Key) {
+		sp = compare(k, &p.item.Key)
+		switch sp {
 		case -1:
-			q, p, sp = p, p.Lson(), true
+			q, p = p, p.Lson()
 		case +1:
-			q, p, sp = p, p.Rson(), false
+			q, p = p, p.Rson()
 		default:
 			break loop
 		}
@@ -346,38 +347,37 @@ loop:
 	}
 	p = new(Node)
 	*p = Node{0, 1, nil, nil, q, item{*k, v}}
-	if q != nil {
-		if sp {
-			t := q.ptA
-			q.ptA, q.mrk = p, q.mrk|2
-			p.ptA, p.ptB = t, q
-		} else {
-			t := q.ptB
-			q.ptB, q.mrk = p, q.mrk|1
-			p.ptA, p.ptB = q, t
-		}
-	}
-	if this.root == null {
+	if q == nil {
 		this.root = p
-	} else {
-		this.root = maintain(this.root, p)
+		return
 	}
+	if sp < 0 {
+		t := q.ptA
+		q.ptA, q.mrk = p, q.mrk|2
+		p.ptA, p.ptB = t, q
+	} else {
+		t := q.ptB
+		q.ptB, q.mrk = p, q.mrk|1
+		p.ptA, p.ptB = q, t
+	}
+	this.root = maintain(this.root, p)
 }
 
 // 不管键已存在或不存在，都插入新的键值对
 func (this *SBT) Insert(n typeA, s typeB, v typeC) {
 	var (
 		p, q *Node
-		sp   bool
+		sp   int8
 	)
 	k := &Key{n, s}
 loop:
 	for q, p = nil, this.root; p != null; {
-		switch compare(k, &p.item.Key) {
+		sp = compare(k, &p.item.Key)
+		switch sp {
 		case -1:
-			q, p, sp = p, p.Lson(), true
+			q, p = p, p.Lson()
 		case +1:
-			q, p, sp = p, p.Rson(), false
+			q, p = p, p.Rson()
 		default:
 			break loop
 		}
@@ -385,41 +385,48 @@ loop:
 	if p != null {
 		l, r := p.Lson(), p.Rson()
 		if l.cnt < r.cnt {
-			for q, p = p, l; p != null; q, p = p, p.Rson() {
+			if l == null {
+				q, sp = p, -1
+			} else {
+				for q, p = p, l; p != null; q, p = p, p.Rson() {
+				}
+				sp = +1
 			}
 		} else {
-			for q, p = p, r; p != null; q, p = p, p.Lson() {
+			if r == null {
+				q, sp = p, +1
+			} else {
+				for q, p = p, r; p != null; q, p = p, p.Lson() {
+				}
+				sp = -1
 			}
 		}
 	}
 	p = new(Node)
 	*p = Node{0, 1, nil, nil, q, item{*k, v}}
-	if q != nil {
-		if sp {
-			t := q.ptA
-			q.ptA, q.mrk = p, q.mrk|2
-			p.ptA, p.ptB = t, q
-		} else {
-			t := q.ptB
-			q.ptB, q.mrk = p, q.mrk|1
-			p.ptA, p.ptB = q, t
-		}
-	}
-	if this.root == null {
+	if q == nil {
 		this.root = p
-	} else {
-		this.root = maintain(this.root, p)
+		return
 	}
+	if sp < 0 {
+		t := q.ptA
+		q.ptA, q.mrk = p, q.mrk|2
+		p.ptA, p.ptB = t, q
+	} else {
+		t := q.ptB
+		q.ptB, q.mrk = p, q.mrk|1
+		p.ptA, p.ptB = q, t
+	}
+	this.root = maintain(this.root, p)
 }
 
 // 删除节点
 func (this *SBT) Delete(p *Node) {
-	if p == nil {
+	if p == nil || p == null {
 		return
 	}
-	l, r, o := p.ptA, p.ptB, p.ptO
 	this.root = toleaf(this.root, p)
-	l, r, o = p.ptA, p.ptB, p.ptO
+	l, r, o := p.ptA, p.ptB, p.ptO
 	if o == nil {
 		this.root = null
 		return

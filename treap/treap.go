@@ -7,9 +7,22 @@ import (
 
 var rd = rand.New(rand.NewSource(time.Now().Unix()))
 
-type key struct {
-	N int64
-	S string
+type typeA = int64
+
+type typeB = string
+
+type typeC = interface{}
+
+// 由typeA和typeB复合构成的键
+type Key struct {
+	N typeA
+	S typeB
+}
+
+// 键值对
+type item struct {
+	Key
+	Val typeC
 }
 
 // 二叉树的指针
@@ -22,8 +35,7 @@ type treePointer struct {
 // 树堆的节点
 type Node struct {
 	wgt int64
-	key
-	val interface{}
+	item
 	treePointer
 }
 
@@ -44,7 +56,7 @@ type BST struct {
 
 var null = &Node{wgt: int64(^uint64(0) >> 1)}
 
-func compare(x, y *key) int8 {
+func compare(x, y *Key) int8 {
 	switch {
 	case x.N < y.N:
 		return -1
@@ -61,13 +73,13 @@ func compare(x, y *key) int8 {
 }
 
 // 获得节点的键，采用函数避免误修改
-func (this *Node) Key() (int64, string) {
+func (this *Node) Key() (typeA, typeB) {
 	return this.N, this.S
 }
 
 // 获得节点的值，采用函数避免误修改
-func (this *Node) Val() interface{} {
-	return this.val
+func (this *Node) Val() typeC {
+	return this.Val
 }
 
 // 获得节点的优先级，越小越优先
@@ -76,8 +88,8 @@ func (this *Node) Weight() int64 {
 }
 
 // 设置节点的值
-func (this *Node) Set(v interface{}) {
-	this.val = v
+func (this *Node) Set(v typeC) {
+	this.Val = v
 }
 
 // 创建一个树堆
@@ -183,27 +195,27 @@ func release(p *Node) *Node {
 }
 
 // 插入键值对，如果键已存在，则更新值。w为优先级；n、s构成键；v为值。
-func (this *Treap) Update(w, n int64, s string, v interface{}) {
+func (this *Treap) Update(w int64, n typeA, s typeB, v typeC) {
 	var p, q *Node
-	k := key{n, s}
+	k := Key{n, s}
 	for q, p = null, this.root; p != null; {
-		switch compare(&p.key, &k) {
+		switch compare(&p.Key, &k) {
 		case -1:
 			q, p = p, p.Rsn
 		case +1:
 			q, p = p, p.Lsn
 		default:
-			p.val = v
+			p.Val = v
 			return
 		}
 	}
 	p = new(Node)
-	*p = Node{w, k, v, treePointer{null, null, null}}
+	*p = Node{w, item{k, v}, treePointer{null, null, null}}
 	if q == null {
 		this.root = p
 		return
 	}
-	switch compare(&q.key, &k) {
+	switch compare(&q.Key, &k) {
 	case -1:
 		q.Rsn = p
 	case +1:
@@ -214,11 +226,11 @@ func (this *Treap) Update(w, n int64, s string, v interface{}) {
 }
 
 // 插入键值对，不管键存不存在，都插入新的键值对。w为优先级；n、s构成键；v为值。
-func (this *Treap) Insert(w, n int64, s string, v interface{}) {
+func (this *Treap) Insert(w int64, n typeA, s typeB, v typeC) {
 	var p, q *Node
-	k := key{n, s}
+	k := Key{n, s}
 	for q, p = null, this.root; p != null; {
-		switch compare(&p.key, &k) {
+		switch compare(&p.Key, &k) {
 		case -1:
 			q, p = p, p.Rsn
 		case +1:
@@ -229,12 +241,12 @@ func (this *Treap) Insert(w, n int64, s string, v interface{}) {
 		}
 	}
 	p = new(Node)
-	*p = Node{w, k, v, treePointer{null, null, null}}
+	*p = Node{w, item{k, v}, treePointer{null, null, null}}
 	if q == null {
 		this.root = p
 		return
 	}
-	switch compare(&q.key, &k) {
+	switch compare(&q.Key, &k) {
 	case -1:
 		q.Rsn = p
 	case +1:
@@ -252,12 +264,12 @@ func NewPQ() *PQ {
 }
 
 // 添加任务或者更新同一优先级的任务
-func (this *PQ) Update(w int64, v interface{}) {
+func (this *PQ) Update(w int64, v typeC) {
 	this.Treap.Update(w, rd.Int63(), "", v)
 }
 
 // 不管是否存在同一优先级的任务都添加任务
-func (this *PQ) Insert(w int64, v interface{}) {
+func (this *PQ) Insert(w int64, v typeC) {
 	this.Treap.Insert(w, rd.Int63(), "", v)
 }
 
@@ -286,23 +298,23 @@ func NewBST() *BST {
 }
 
 // 添加键值对或者更新已存在的键对应的值
-func (this *BST) Update(n int64, s string, v interface{}) {
+func (this *BST) Update(n typeA, s typeB, v typeC) {
 	this.Treap.Update(rd.Int63(), n, s, v)
 }
 
 // 添加键值对，即使键已存在仍然添加
-func (this *BST) Insert(n int64, s string, v interface{}) {
+func (this *BST) Insert(n typeA, s typeB, v typeC) {
 	this.Treap.Insert(rd.Int63(), n, s, v)
 }
 
 // 根据键查找值
-func (this *BST) Search(n int64, s string) interface{} {
+func (this *BST) Search(n typeA, s typeB) typeC {
 	p := this.root
-	k := key{n, s}
+	k := Key{n, s}
 	for p != null {
-		switch compare(&p.key, &k) {
+		switch compare(&p.Key, &k) {
 		case 0:
-			return p.val
+			return p.Val
 		case 1:
 			p = p.Lsn
 		default:
@@ -313,11 +325,11 @@ func (this *BST) Search(n int64, s string) interface{} {
 }
 
 // 删除键值对
-func (this *BST) Delete(n int64, s string) {
+func (this *BST) Delete(n typeA, s typeB) {
 	var p, q *Node
-	k := key{n, s}
+	k := Key{n, s}
 	for q, p = null, this.root; p != null; {
-		switch compare(&p.key, &k) {
+		switch compare(&p.Key, &k) {
 		case -1:
 			q, p = p, p.Rsn
 		case +1:
