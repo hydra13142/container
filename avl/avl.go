@@ -480,14 +480,50 @@ func (this *AVL) Max() *Node {
 }
 
 // 用来以文本格式显示二叉树（AVL包装版本）
-func (this *AVL) Show(f func(*Node) string) string {
+func (this *AVL) Show(f func(*Node) string, spin bool) string {
 	n, str := this.root.Show(f)
-	block := ""
 	for i, line := range str {
 		if i == n {
-			block += "----" + line + "\r\n"
+			str[i] = "----" + line
 		} else {
-			block += "    " + line + "\r\n"
+			str[i] = "    " + line
+		}
+	}
+	block := ""
+	x, y := len(str), 0
+	if spin {
+		for i := 0; i < x; i++ {
+			if j := len(str[i]); y < j {
+				y = j
+			}
+		}
+		out := make([][]byte, y)
+		for j := 0; j < y; j++ {
+			out[j] = make([]byte, x)
+		}
+		for i := 0; i < x; i++ {
+			t := len(str[i])
+			for j := 0; j < y; j++ {
+				if j < t {
+					switch c := str[i][j]; c {
+					case '-':
+						out[j][i] = '|'
+					case '|':
+						out[j][i] = '-'
+					default:
+						out[j][i] = c
+					}
+				} else {
+					out[j][i] = ' '
+				}
+			}
+		}
+		for i := 0; i < y; i++ {
+			block += string(out[i]) + "\r\n"
+		}
+	} else {
+		for i := 0; i < x; i++ {
+			block += str[i] + "\r\n"
 		}
 	}
 	return block
